@@ -2,9 +2,9 @@
 
 ########### Verify arguments ###########
 
-if [ "$#" -ne 1 ]; then
+if [ "$#" -ne 1 ] || [ ! -f "$1" ] ; then
     >&2 echo "Invalid argument, use $0 <file>"
-    exit 22
+    exit 1
 fi
 
 ########### Define variables ###########
@@ -19,6 +19,7 @@ PORT=${MD_PORT:-8000}
 mkdir -p $PREVIEW_DIR
 python3 -m http.server -d $PREVIEW_DIR $PORT >/dev/null 2>&1 &
 SERVER_PID=$!
+cp $(dirname "$0")/live.js $PREVIEW_DIR/live.js
 
 ############ Capture signal ############
 
@@ -32,8 +33,9 @@ function ctrl_c()
 
 function update_preview()
 {
-    local PREVIEW="$(pandoc $FILE)"
-    echo "<html><head><meta charset=\"utf-8\"/><script type=\"text/javascript\" src=\"http://livejs.com/live.js\"></script></head><body>${PREVIEW}</body>" >$PREVIEW_FILE
+    local ts=$(date +%s%N)
+    echo "$(pandoc --mathjax -s $FILE -A "$PREVIEW_DIR/live.js")" >$PREVIEW_FILE
+    echo "===== Rendered in $((($(date +%s%N) - $ts) / 1000000)) ms ====="
 }
 
 ########## Script starts here ##########
