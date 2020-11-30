@@ -9,6 +9,9 @@ fi
 
 ########### Define variables ###########
 
+SCRIPT=$(realpath $0)
+SCRIPT_PATH=$(dirname $SCRIPT)
+
 FILE=$1
 PREVIEW_DIR=${MD_PATH:-/tmp/mdisplay}
 PREVIEW_FILE=$PREVIEW_DIR/index.html
@@ -19,7 +22,7 @@ PORT=${MD_PORT:-8000}
 mkdir -p $PREVIEW_DIR
 python3 -m http.server -d $PREVIEW_DIR $PORT >/dev/null 2>&1 &
 SERVER_PID=$!
-cp $(dirname "$0")/live.js $PREVIEW_DIR/live.js
+cp $SCRIPT_PATH/live.js $PREVIEW_DIR/live.js
 
 ############ Capture signal ############
 
