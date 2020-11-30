@@ -17,37 +17,66 @@ PREVIEW_DIR=${MD_PATH:-/tmp/mdisplay}
 PREVIEW_FILE=$PREVIEW_DIR/index.html
 PORT=${MD_PORT:-8000}
 
+LOGS=$PREVIEW_DIR/logs.txt
+PID_TO_KILL=()
+
 ########## Create environment ##########
 
 mkdir -p $PREVIEW_DIR
-python3 -m http.server -d $PREVIEW_DIR $PORT >/dev/null 2>&1 &
-SERVER_PID=$!
+>/dev/null 2>&1 python3 -m http.server -d $PREVIEW_DIR $PORT &
+PID_TO_KILL+=("$!")
 cp $SCRIPT_PATH/live.js $PREVIEW_DIR/live.js
-
-############ Capture signal ############
-
-trap ctrl_c INT
-function ctrl_c()
-{
-    kill $SERVER_PID
-}
 
 ########### Define functions ###########
 
 function update_preview()
 {
     local ts=$(date +%s%N)
-    echo "$(pandoc --mathjax -s $FILE -A "$PREVIEW_DIR/live.js")" >$PREVIEW_FILE
-    echo "===== Rendered in $((($(date +%s%N) - $ts) / 1000000)) ms ====="
+    echo "$(2>$LOGS pandoc --mathjax -s $FILE -A "$PREVIEW_DIR/live.js")" >$PREVIEW_FILE
+}
+
+function handle_edition()
+{
+    while inotifywait -d -o $LOGS -e modify,move_self $FILE
+    do
+        update_preview
+    done
+}
+
+function clean_exit()
+{
+    for pid in "${PID_TO_KILL[@]}"
+    do
+        echo "Killing $pid"
+        kill "$pid"
+    done
+    echo "Exiting ..."
+    exit $1
+}
+
+############ Capture signal ############
+
+trap ctrl_c INT
+function ctrl_c()
+{
+    clean_exit 130
 }
 
 ########## Script starts here ##########
 
+# Update the preview to generate the html file
 update_preview
 
-exec $BROWSER "http://localhost:$PORT" &
+# Start the browser to display the generated file
+>/dev/null exec $BROWSER "http://localhost:$PORT" &
 
-while inotifywait -e modify,move_self $FILE
-do
-    update_preview
-done
+# Starts the event handler to update on file modification
+handle_edition &
+PID_TO_KILL+=("$!")
+
+# Open your editor with the file
+</dev/tty "$EDITOR" $FILE
+
+# Exit ending processes
+clean_exit 0
+
