@@ -4,18 +4,19 @@ You can use this script to interactively see the preview of the file you are edi
 
 Supported input files:
 - MarkDown
+- LaTeX
 
-## How to install it ?
+## Prerequisites
 
-You must have:
 - python3
 - pandoc
 - inotify-tools
 
+## How to install it ?
 
-You can copy it on a PATH dir:
+You just have to run the install script:
 ```
-# cp mdisplay.sh /usr/local/bin/mdisplay
+# ./install.sh
 ```
 
 ## How to use it ?
