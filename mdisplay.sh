@@ -23,7 +23,7 @@ PID_TO_KILL=()
 ########## Create environment ##########
 
 mkdir -p $PREVIEW_DIR
->/dev/null 2>&1 python3 -m http.server -d $PREVIEW_DIR $PORT &
+>>$LOGS 2>&1 python3 -m http.server -d $PREVIEW_DIR $PORT &
 PID_TO_KILL+=("$!")
 cp $SCRIPT_PATH/live.js $PREVIEW_DIR/live.js
 
@@ -32,12 +32,13 @@ cp $SCRIPT_PATH/live.js $PREVIEW_DIR/live.js
 function update_preview()
 {
     local ts=$(date +%s%N)
-    echo "$(2>$LOGS pandoc --mathjax -s $FILE -A "$PREVIEW_DIR/live.js")" >$PREVIEW_FILE
+    echo "$(2>>$LOGS pandoc --mathjax -s $FILE -A "$SCRIPT_PATH/live.js")" >$PREVIEW_FILE
+    echo "===== Rendered in $((($(date +%s%N) - $ts) / 1000000)) ms =====" >>$LOGS
 }
 
 function handle_edition()
 {
-    while inotifywait -d -o $LOGS -e modify,move_self $FILE
+    while inotifywait -e modify,move_self $FILE
     do
         update_preview
     done
@@ -68,10 +69,10 @@ function ctrl_c()
 update_preview
 
 # Start the browser to display the generated file
->/dev/null exec $BROWSER "http://localhost:$PORT" &
+>>$LOGS exec $BROWSER "http://localhost:$PORT" &
 
 # Starts the event handler to update on file modification
-handle_edition &
+>>$LOGS 2>&1 handle_edition &
 PID_TO_KILL+=("$!")
 
 # Open your editor with the file
